@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Provenance dApp</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.0/dist/web3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        
+        .section h2 {
+            color: #555;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .tab {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+            border-radius: 4px 4px 0 0;
+        }
+        
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+            color: #333;
+            margin: 0;
+            border-radius: 0;
+        }
+        
+        .tab button:hover {
+            background-color: #ddd;
+        }
+        
+        .tab button.active {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .tabcontent {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+        }
+        
+        .account-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Product Provenance dApp</h1>
+        
+        <div class="account-info" id="accountInfo">
+            <strong>连接状态:</strong> <span id="connectionStatus">未连接</span><br>
+            <strong>当前账户:</strong> <span id="currentAccount">无</span><br>
+            <strong>合约地址:</strong> <input type="text" id="contractAddress" placeholder="输入合约地址" style="width: 400px;">
+            <button onclick="connectWallet()">连接钱包</button>
+            <button onclick="loadContract()">加载合约</button>
+        </div>
+
+        <div class="tab">
+            <button class="tablinks active" onclick="openTab(event, 'RoleManagement')">角色管理</button>
+            <button class="tablinks" onclick="openTab(event, 'Product')">产品管理</button>
+            <button class="tablinks" onclick="openTab(event, 'Warranty')">保修管理</button>
+            <button class="tablinks" onclick="openTab(event, 'Query')">查询验证</button>
+        </div>
+
+        <!-- 角色管理标签 -->
+        <div id="RoleManagement" class="tabcontent" style="display: block;">
+            <div class="section">
+                <h2>分配角色</h2>
+                <div class="form-group">
+                    <label>用户地址:</label>
+                    <input type="text" id="userAddress" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label>角色:</label>
+                    <select id="roleSelect">
+                        <option value="1">制造商 (Manufacturer)</option>
+                        <option value="2">零售商 (Retailer)</option>
+                        <option value="3">消费者 (Customer)</option>
+                    </select>
+                </div>
+                <button onclick="assignRole()">分配角色</button>
+                <div id="roleResult" class="result"></div>
+            </div>
+
+            <div class="section">
+                <h2>添加服务中心</h2>
+                <div class="form-group">
+                    <label>服务中心地址:</label>
+                    <input type="text" id="serviceCenterAddress" placeholder="0x...">
+                </div>
+                <button onclick="addServiceCenter()">添加服务中心</button>
+                <div id="serviceCenterResult" class="result"></div>
+            </div>
+        </div>
+
+        <!-- 产品管理标签 -->
+        <div id="Product" class="tabcontent">
+            <div class="section">
+                <h2>注册新产品</h2>
+                <div class="form-group">
+                    <label>产品ID:</label>
+                    <input type="text" id="productId" placeholder="WATCH001">
+                </div>
+                <div class="form-group">
+                    <label>序列号:</label>
+                    <input type="text" id="serialNumber" placeholder="SN123456">
+                </div>
+                <div class="form-group">
+                    <label>型号:</label>
+                    <input type="text" id="model" placeholder="Apple Watch">
+                </div>
+                <div class="form-group">
+                    <label>规格:</label>
+                    <input type="text" id="specifications" placeholder="Titanium Case">
+                </div>
+                <div class="form-group">
+                    <label>保修时长 (天):</label>
+                    <input type="number" id="warrantyDuration" value="365">
+                </div>
+                <div class="form-group">
+                    <label>最大保修次数:</label>
+                    <input type="number" id="maxClaims" value="3">
+                </div>
+                <button onclick="registerProduct()">注册产品</button>
+                <div id="registerResult" class="result"></div>
+            </div>
+
+            <div class="section">
+                <h2>转移所有权</h2>
+                <div class="form-group">
+                    <label>产品ID:</label>
+                    <input type="text" id="transferProductId" placeholder="WATCH001">
+                </div>
+                <div class="form-group">
+                    <label>目标地址:</label>
+                    <input type="text" id="targetAddress" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label>交易详情:</label>
+                    <input type="text" id="transactionDetails" placeholder="描述转移原因">
+                </div>
+                <div class="form-group">
+                    <label>转移类型:</label>
+                    <select id="transferType">
+                        <option value="manufacturerToRetailer">制造商 → 零售商</option>
+                        <option value="retailerToCustomer">零售商 → 消费者</option>
+                        <option value="customerToCustomer">消费者 → 消费者 (转售)</option>
+                    </select>
+                </div>
+                <button onclick="transferOwnership()">转移所有权</button>
+                <div id="transferResult" class="result"></div>
+            </div>
+        </div>
+
+        <!-- 保修管理标签 -->
+        <div id="Warranty" class="tabcontent">
+            <div class="section">
+                <h2>提交保修申请</h2>
+                <div class="form-group">
+                    <label>产品ID:</label>
+                    <input type="text" id="claimProductId" placeholder="WATCH001">
+                </div>
+                <div class="form-group">
+                    <label>问题描述:</label>
+                    <textarea id="claimDescription" rows="3" placeholder="详细描述产品问题..."></textarea>
+                </div>
+                <button onclick="submitWarrantyClaim()">提交保修申请</button>
+                <div id="claimResult" class="result"></div>
+            </div>
+
+            <div class="section">
+                <h2>处理保修申请</h2>
+                <div class="form-group">
+                    <label>产品ID:</label>
+                    <input type="text" id="processProductId" placeholder="WATCH001">
+                </div>
+                <div class="form-group">
+                    <label>申请ID:</label>
+                    <input type="number" id="claimId" value="0">
+                </div>
+                <div class="form-group">
+                    <label>处理状态:</label>
+                    <select id="claimStatus">
+                        <option value="1">批准 (Approved)</option>
+                        <option value="2">拒绝 (Rejected)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>服务说明:</label>
+                    <textarea id="serviceNotes" rows="3" placeholder="维修详情和更换部件..."></textarea>
+                </div>
+                <button onclick="processWarrantyClaim()">处理保修申请</button>
+                <div id="processResult" class="result"></div>
+            </div>
+        </div>
+
+        <!-- 查询验证标签 -->
+        <div id="Query" class="tabcontent">
+            <div class="section">
+                <h2>验证产品所有权</h2>
+                <div class="form-group">
+                    <label>产品ID:</label>
+                    <input type="text" id="verifyProductId" placeholder="WATCH001">
+                </div>
+                <button onclick="verifyOwnership()">验证所有权</button>
+                <div id="verifyResult" class="result"></div>
+            </div>
+
+            <div class="section">
+                <h2>查询产品详情</h2>
+                <div class="form-group">
+                    <label>产品ID:</label>
+                    <input type="text" id="queryProductId" placeholder="WATCH001">
+                </div>
+                <button onclick="getProductDetails()">查询详情</button>
+                <div id="detailsResult" class="result"></div>
+            </div>
+
+            <div class="section">
+                <h2>检查保修状态</h2>
+                <div class="form-group">
+                    <label>产品ID:</label>
+                    <input type="text" id="warrantyProductId" placeholder="WATCH001">
+                </div>
+                <button onclick="checkWarrantyStatus()">检查状态</button>
+                <div id="warrantyResult" class="result"></div>
+            </div>
+
+            <div class="section">
+                <h2>查看所有权历史</h2>
+                <div class="form-group">
+                    <label>产品ID:</label>
+                    <input type="text" id="historyProductId" placeholder="WATCH001">
+                </div>
+                <button onclick="getOwnershipHistory()">查看历史</button>
+                <div id="historyResult" class="result"></div>
+            </div>
+        </div>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        let web3;
+        let contract;
+        let accounts;
+
+        // 标签页功能
+        function openTab(evt, tabName) {
+            const tabcontent = document.getElementsByClassName("tabcontent");
+            for (let i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            
+            const tablinks = document.getElementsByClassName("tablinks");
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        // 连接MetaMask钱包
+        async function connectWallet() {
+            try {
+                if (window.ethereum) {
+                    web3 = new Web3(window.ethereum);
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    accounts = await web3.eth.getAccounts();
+                    
+                    document.getElementById('connectionStatus').textContent = '已连接';
+                    document.getElementById('currentAccount').textContent = accounts[0];
+                    document.getElementById('connectionStatus').className = 'success';
+                    
+                    showStatus('钱包连接成功!', 'success');
+                } else {
+                    showStatus('请安装MetaMask!', 'error');
+                }
+            } catch (error) {
+                showStatus('连接失败: ' + error.message, 'error');
+            }
+        }
+
+        // 加载合约
+        async function loadContract() {
+            const contractAddress = document.getElementById('contractAddress').value;
+            
+            if (!contractAddress) {
+                showStatus('请输入合约地址!', 'error');
+                return;
+            }
+
+            if (!web3) {
+                showStatus('请先连接钱包!', 'error');
+                return;
+            }
+
+            try {
+                // 合约ABI - 这里需要您从Remix编译后获取完整的ABI
+                const contractABI = [
+                    {
+                        "inputs": [],
+                        "stateMutability": "nonpayable",
+                        "type": "constructor"
+                    },
+                    // 这里应该包含完整的ABI，由于篇幅限制，我提供关键函数
+                    {
+                        "inputs": [
+                            {"internalType": "address", "name": "user", "type": "address"},
+                            {"internalType": "uint8", "name": "role", "type": "uint8"}
+                        ],
+                        "name": "assignRole",
+                        "outputs": [],
+                        "stateMutability": "nonpayable",
+                        "type": "function"
+                    },
+                    {
+                        "inputs": [
+                            {"internalType": "string", "name": "productId", "type": "string"},
+                            {"internalType": "string", "name": "serialNumber", "type": "string"},
+                            {"internalType": "string", "name": "model", "type": "string"},
+                            {"internalType": "string", "name": "specifications", "type": "string"},
+                            {"internalType": "uint256", "name": "warrantyDuration", "type": "uint256"},
+                            {"internalType": "uint256", "name": "maxWarrantyClaims", "type": "uint256"}
+                        ],
+                        "name": "registerProduct",
+                        "outputs": [],
+                        "stateMutability": "nonpayable",
+                        "type": "function"
+                    },
+                    {
+                        "inputs": [
+                            {"internalType": "string", "name": "productId", "type": "string"},
+                            {"internalType": "address", "name": "customer", "type": "address"},
+                            {"internalType": "string", "name": "transactionDetails", "type": "string"}
+                        ],
+                        "name": "sellToCustomer",
+                        "outputs": [],
+                        "stateMutability": "nonpayable",
+                        "type": "function"
+                    },
+                    {
+                        "inputs": [
+                            {"internalType": "string", "name": "productId", "type": "string"},
+                            {"internalType": "string", "name": "description", "type": "string"}
+                        ],
+                        "name": "submitWarrantyClaim",
+                        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                        "stateMutability": "nonpayable",
+                        "type": "function"
+                    },
+                    {
+                        "inputs": [
+                            {"internalType": "string", "name": "productId", "type": "string"},
+                            {"internalType": "uint256", "name": "claimId", "type": "uint256"},
+                            {"internalType": "uint8", "name": "status", "type": "uint8"},
+                            {"internalType": "string", "name": "serviceNotes", "type": "string"}
+                        ],
+                        "name": "processWarrantyClaim",
+                        "outputs": [],
+                        "stateMutability": "nonpayable",
+                        "type": "function"
+                    },
+                    {
+                        "inputs": [
+                            {"internalType": "string", "name": "productId", "type": "string"}
+                        ],
+                        "name": "verifyProductOwnership",
+                        "outputs": [
+                            {"internalType": "bool", "name": "isOwner", "type": "bool"},
+                            {"internalType": "bool", "name": "isAuthentic", "type": "bool"},
+                            {"internalType": "address", "name": "currentOwner", "type": "address"},
+                            {"internalType": "address", "name": "manufacturer", "type": "address"}
+                        ],
+                        "stateMutability": "view",
+                        "type": "function"
+                    }
+                ];
+
+                contract = new web3.eth.Contract(contractABI, contractAddress);
+                showStatus('合约加载成功!', 'success');
+            } catch (error) {
+                showStatus('合约加载失败: ' + error.message, 'error');
+            }
+        }
+
+        // 分配角色
+        async function assignRole() {
+            const userAddress = document.getElementById('userAddress').value;
+            const role = document.getElementById('roleSelect').value;
+
+            try {
+                await contract.methods.assignRole(userAddress, role).send({ from: accounts[0] });
+                document.getElementById('roleResult').innerHTML = '<div class="success">角色分配成功!</div>';
+            } catch (error) {
+                document.getElementById('roleResult').innerHTML = '<div class="error">错误: ' + error.message + '</div>';
+            }
+        }
+
+        // 注册产品
+        async function registerProduct() {
+            const productId = document.getElementById('productId').value;
+            const serialNumber = document.getElementById('serialNumber').value;
+            const model = document.getElementById('model').value;
+            const specifications = document.getElementById('specifications').value;
+            const warrantyDuration = document.getElementById('warrantyDuration').value;
+            const maxClaims = document.getElementById('maxClaims').value;
+
+            try {
+                await contract.methods.registerProduct(
+                    productId, serialNumber, model, specifications, warrantyDuration, maxClaims
+                ).send({ from: accounts[0] });
+                
+                document.getElementById('registerResult').innerHTML = '<div class="success">产品注册成功!</div>';
+            } catch (error) {
+                document.getElementById('registerResult').innerHTML = '<div class="error">错误: ' + error.message + '</div>';
+            }
+        }
+
+        // 提交保修申请
+        async function submitWarrantyClaim() {
+            const productId = document.getElementById('claimProductId').value;
+            const description = document.getElementById('claimDescription').value;
+
+            try {
+                const result = await contract.methods.submitWarrantyClaim(productId, description).send({ from: accounts[0] });
+                document.getElementById('claimResult').innerHTML = '<div class="success">保修申请提交成功! Claim ID: ' + result.events.WarrantyClaimSubmitted.returnValues.claimId + '</div>';
+            } catch (error) {
+                document.getElementById('claimResult').innerHTML = '<div class="error">错误: ' + error.message + '</div>';
+            }
+        }
+
+        // 验证所有权
+        async function verifyOwnership() {
+            const productId = document.getElementById('verifyProductId').value;
+
+            try {
+                const result = await contract.methods.verifyProductOwnership(productId).call({ from: accounts[0] });
+                let html = '<div class="info">';
+                html += '<strong>验证结果:</strong><br>';
+                html += '您是所有者: ' + (result[0] ? '✅ 是' : '❌ 否') + '<br>';
+                html += '产品真实: ' + (result[1] ? '✅ 是' : '❌ 否') + '<br>';
+                html += '当前所有者: ' + result[2] + '<br>';
+                html += '制造商: ' + result[3] + '<br>';
+                html += '</div>';
+                document.getElementById('verifyResult').innerHTML = html;
+            } catch (error) {
+                document.getElementById('verifyResult').innerHTML = '<div class="error">错误: ' + error.message + '</div>';
+            }
+        }
+
+        // 显示状态消息
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            setTimeout(() => {
+                statusDiv.textContent = '';
+                statusDiv.className = 'status';
+            }, 5000);
+        }
+
+        // 页面加载时自动连接（如果MetaMask已连接）
+        window.addEventListener('load', async () => {
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                try {
+                    accounts = await web3.eth.getAccounts();
+                    if (accounts.length > 0) {
+                        document.getElementById('connectionStatus').textContent = '已连接';
+                        document.getElementById('currentAccount').textContent = accounts[0];
+                    }
+                } catch (error) {
+                    console.log('未自动连接钱包');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
